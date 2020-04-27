@@ -37,6 +37,7 @@ from hyperspy.learn.svd_pca import svd_pca
 from hyperspy.learn.mlpca import mlpca
 from hyperspy.learn.rpca import rpca_godec, orpca
 from hyperspy.learn.ornmf import ornmf
+from hyperspy.learn.svd_tensor import svd_HO
 from scipy import linalg
 from hyperspy.misc.machine_learning.orthomax import orthomax
 from hyperspy.misc.utils import stack, ordinal
@@ -542,6 +543,47 @@ class MVA():
             print("\n".join([str(pr) for pr in to_print]))
 
         return to_return
+
+    def tensor_decomposition(self,
+                             rank,
+                             unfolded_axes="signal",
+                             max_iter=10):
+        """Performs a tensor decomposition on an N dimensional
+        dataset. Provides higher degree decomposition
+
+        Parameters
+        ----------------
+        rank: (R1, R2, R3, ... , Rn)
+            Describes the length of the eigenvectors for each dimension
+        unfolded_axes: int
+            The axes to be unfolded during the decomposition
+        max_iter:
+            The maximum number of iterations to preform
+            the decomposition
+        """
+        # check rank and number of axes match
+        if unfolded_axes == "signal":
+            unfolded_dim = len(rank)+len(self.axes_manager.signal_axes)-1
+        else:
+            unfolded_dim = len(rank) + len(unfolded_axes)-1
+        if unfolded_dim != len(self.axes_manager.shape):
+            raise ValueError("The rank must have the same number of "
+                              "factors as the number of axes which are "
+                              "not unfolded ")
+        if unfolded_axes != "signal":
+            unwrapped_signal = self.transpose(signal_axes=unfolded_axes)
+        else:
+            unwrapped_signal = self
+        unwrapped_signal.unfold(unfold_navigation=False,
+                                unfold_signal=True)
+        X,U, S = svd_HO(unwrapped_signal.data, rank=rank, max_iter=max_iter)
+        print(U)
+        print(np.shape(X))
+        print(np.shape(U))
+        print(np.shape(S))
+
+
+
 
     def blind_source_separation(self,
                                 number_of_components=None,
